@@ -1,18 +1,47 @@
 import llama_cpp
 import json
 import llama_cpp.llama_tokenizer
+import random
 
 def load_model():
     model = llama_cpp.Llama.from_pretrained(
         repo_id="bartowski/Llama-3-Instruct-8B-SPPO-Iter3-GGUF",
         filename="Llama-3-Instruct-8B-SPPO-Iter3-Q4_K_M.gguf",
         tokenizer = llama_cpp.llama_tokenizer.LlamaHFTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct"),
+        n_ctx = 4096,
         n_gpu_layers = -1,
         verbose= False,
+        temperature=0.2
     )
     return model
 
+
+def chunk_text(text, max_chars=8000, overlap=100):
+    words = text.split()
+    chunks = []
+    current_chunk = []
+    current_length = 0
+
+    for word in words:
+        if current_length + len(word) + 1 > max_chars and current_chunk:
+            # Join the current chunk and add it to the list of chunks
+            chunks.append(' '.join(current_chunk))
+            # Keep the overlap
+            overlap_words = current_chunk[-overlap:]
+            current_chunk = overlap_words
+            current_length = sum(len(w) + 1 for w in overlap_words) - 1
+
+        current_chunk.append(word)
+        current_length += len(word) + 1  # +1 for the space
+
+    # Add the last chunk
+    if current_chunk:
+        chunks.append(' '.join(current_chunk))
+
+    return chunks
+
 def is_slang(model:llama_cpp.Llama, word:str):
+            
 
             response = model.create_chat_completion(
             messages=[
@@ -79,7 +108,6 @@ def create_words(model:llama_cpp.Llama, word:str, is_slang:bool = False):
             else:
                 prompt = f"""Define 4 words to represent the word {word} on a cartesian compass, where each word will lie on the axis depending on a meaning.
                                     the chosen words must be something you can describe a person against.
-                                    be as creative as possible and use meme culture and internet slang to define the words.
                                     also define the meaning of the x and y axis. x and y axis should cover different aspects of the given word. 
                                     x and y axis must capture different aspects of the given word.
                                     positive x and negative x must be opposites, and the same for positive y and negative y.
@@ -109,14 +137,65 @@ def create_words(model:llama_cpp.Llama, word:str, is_slang:bool = False):
             },
             stream= False,
             )
-            return response["choices"][0]["message"]["content"]
+            return json.loads(response["choices"][0]["message"]["content"])
 
-model = load_model()
-word = "vibe"
-#word_info = get_word_info(word)
-#word_info = is_slang(word)
-#word_info = word_meaning(word)
-words = create_words(model, word, is_slang = True)
-response = json.loads(words)
-context = give_context(model, word, response["positive_x"], response["negative_x"], response["positive_y"], response["negative_y"])
-print(context["choices"][0]["message"]["content"])
+
+def normalize_value(value, old_min, old_max, new_min, new_max):
+    """Normalize a value from one range to another."""
+    old_range = old_max - old_min
+    new_range = new_max - new_min
+    return (((value - old_min) * new_range) / old_range) + new_min
+
+def give_rating(text: str, model: llama_cpp.Llama, word: str, x_aspect: str, x_positive: str, x_negative: str, y_aspect: str, y_positive: str, y_negative: str) -> list:
+    prompt = f"""You are provided with a compiled list of tweets from a user and a cartesian plane and where each axis corresponds to an aspect of the word {word}.
+    The X aspect is "{x_aspect}" and the positive X axis is {x_positive}, and the negative X axis is {x_negative}
+    The Y aspect is "{y_aspect}" and the positive X axis is {y_positive}, and the negative X axis is {y_negative}.
+    Your job is to provide a coordinate for the combined tweets on the cartesian plane.
+    Each tweet is separated by a new line.
+    The range for the X and Y axis is from -5 to 5. Please provide a value for the text based on what you feel about the text.
+    Strictly stay within the range of -5 to 5. Do not go over.
+    If X is positive, it means the text is more {x_positive} and if X is negative, it means the text is more {x_negative}.
+    If Y is positive, it means the text is more {y_positive} and if Y is negative, it means the text is more {y_negative}.
+    Be creative with your ratings and be genuine.
+    Here are the tweets:
+    """
+    chunks = chunk_text(text)
+    
+    x_values = []
+    y_values = []
+
+    for chunk in chunks:
+        response = model.create_chat_completion(
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt + chunk
+                },
+            ],
+            response_format={
+                "type": "json_object",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "x_value": {"type": "integer"},
+                        "y_value": {"type": "integer"}
+                    },
+                    "required": ["x_value", "y_value"],
+                }
+            },
+            stream=False,
+        )
+        values_str = response["choices"][0]["message"]["content"]
+        values = json.loads(values_str)
+        x_values.append(values["x_value"])
+        y_values.append(values["y_value"])
+
+    # Calculate the sum of x and y values
+    x_sum = sum(x_values)
+    y_sum = sum(y_values)
+
+    # Normalize the sums to be between -10 and 10
+    x_normalized = normalize_value(x_sum, min(x_sum, -5), max(x_sum, 5), -5, 5)
+    y_normalized = normalize_value(y_sum, min(y_sum, -5), max(y_sum, 5), -5, 5)
+
+    return [round(x_normalized), round(y_normalized)]
