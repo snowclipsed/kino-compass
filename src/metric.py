@@ -16,7 +16,7 @@ def load_model():
     return model
 
 
-def chunk_text(text, max_chars=8000, overlap=100):
+def chunk_text(text, max_chars=12000, overlap=100):
     words = text.split()
     chunks = []
     current_chunk = []
@@ -40,7 +40,7 @@ def chunk_text(text, max_chars=8000, overlap=100):
 
     return chunks
 
-def is_slang(model:llama_cpp.Llama, word:str):
+def is_slang(model:llama_cpp.Llama, word:str)->bool:
             
 
             response = model.create_chat_completion(
@@ -63,7 +63,7 @@ def is_slang(model:llama_cpp.Llama, word:str):
             stream= False,
             )
             
-            return response["choices"][0]["message"]["content"]
+            return json.loads(response["choices"][0]["message"]["content"])["is_internet_slang"]
 
 def word_meaning(model:llama_cpp.Llama, word:str):
             
