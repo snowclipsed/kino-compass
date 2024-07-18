@@ -3,6 +3,7 @@ import json
 import time
 import os
 import matplotlib.pyplot as plt
+from rich import print
 
 start = time.time()
 
@@ -13,23 +14,27 @@ extracted = data.extract_info(tweets)
 start_date = '2024-06-27'
 end_date = '2024-06-28'
 # filtered_tweets = data.get_tweets_by_date(extracted, start_date, end_date)
-tweet_text = data.divide_tweets_by_period_text(extracted,30)
+tweet_text = data.divide_tweets_by_period_text(extracted,80)
 
 
 model = metric.load_model()
 # chunks = metric.chunk_text(tweet_text[0], max_chars=4000, overlap=100)
 
-word = "kino"
-attributes = metric.create_words(model, word, is_slang = False)
+word = "tech bro"
+is_slang = metric.is_slang(model, word)
+
+attributes = metric.create_words(model, word, is_slang = is_slang)
 ratings = []
 for text in tweet_text:
     ratings.append(metric.give_rating(text, model, word, attributes['x_meaning'], attributes['positive_x'], attributes['negative_x'], attributes['y_meaning'], attributes['positive_y'], attributes['negative_y']))
 
-print(ratings)   
+ 
 
 mean_x = sum(rating[0] for rating in ratings) / len(ratings)
 mean_y = sum(rating[1] for rating in ratings) / len(ratings)
 mean_rating = (mean_x, mean_y)
+
+del model
 
 # Create the plot
 plt.figure(figsize=(8, 8))
@@ -42,7 +47,8 @@ for rating in ratings:
 plt.scatter(mean_rating[0], mean_rating[1], c='red', s=100, label='Mean Rating')  # Larger red dot for the mean rating
 
 end = time.time()
-print(f"Time taken: {end - start} seconds")
+print(f"[bold green] Mean rating: [/] [yellow]{end - start} [/][bold green]seconds[/]")
+print(f"[bold green] Mean rating: [/] [yellow]{mean_rating}[/]")
 # Label the axes
 plt.axhline(0, color='black', linewidth=0.5)
 plt.axvline(0, color='black', linewidth=0.5)
