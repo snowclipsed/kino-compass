@@ -1,32 +1,28 @@
 import React, { useState } from 'react';
-import { runScript } from './api';
+import ApiKeyInput from './components/ApiKeyInput';
+import ProviderSelection from './components/ProviderSelection';
+import SubmitApiButton from './components/SubmitApiButton';
 
 function App() {
-    const [result, setResult] = useState(null);
+  const [apiKey, setApiKey] = useState('');
+  const [provider, setProvider] = useState('');
 
-    const handleRunScript = async () => {
-        try {
-            const response = await runScript();
-            setResult(response.result);
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    };
+  const handleSubmit = () => {
+    console.log('Submitting:',  { apiKey, provider });
+    // Add your submit logic here
+  };
 
-    return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-            <header className="text-center">
-                <h1 className="text-4xl font-bold mb-4">Run Python Script</h1>
-                <button
-                    onClick={handleRunScript}
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
-                >
-                    Run Script
-                </button>
-                {result && <p className="mt-4 text-lg">Result: {result}</p>}
-            </header>
-        </div>
-    );
+  return (
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
+      <h1 className="text-4xl font-bold mb-8">𝕏 Compass</h1>
+      
+      <div className="w-full max-w-md space-y-6">
+        <ApiKeyInput apiKey={apiKey} setApiKey={setApiKey} />
+        <ProviderSelection provider={provider} setProvider={setProvider} />
+        <SubmitApiButton onClick={handleSubmit} />
+      </div>
+    </div>
+  );
 }
 
 export default App;
