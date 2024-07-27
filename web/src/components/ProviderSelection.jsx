@@ -11,8 +11,8 @@ const ProviderSelection = ({ provider, setProvider }) => {
         className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">Select a provider</option>
-        <option value="option1">Groq</option>
-        <option value="option2">GPT4o</option>
+        <option value="groq">Groq</option>
+        <option value="gpt4o">GPT4o</option>
       </select>
     </div>
   );
