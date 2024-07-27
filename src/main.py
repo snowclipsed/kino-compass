@@ -1,5 +1,4 @@
 import metric, data
-import json
 import time
 import os
 import matplotlib.pyplot as plt

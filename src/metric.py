@@ -1,7 +1,6 @@
 import llama_cpp
 import json
 import llama_cpp.llama_tokenizer
-import random
 
 def load_model():
     model = llama_cpp.Llama.from_pretrained(

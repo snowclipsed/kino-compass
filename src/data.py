@@ -2,9 +2,6 @@ import json
 from datetime import datetime, timedelta, timezone
 
 
-from llama_cpp.llama_grammar import parse
-
-
 def load_tweets(tweet_path:str):
     with open(tweet_path) as f:
         return json.load(f)
