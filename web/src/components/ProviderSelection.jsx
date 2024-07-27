@@ -13,6 +13,7 @@ const ProviderSelection = ({ provider, setProvider }) => {
         <option value="">Select a provider</option>
         <option value="groq">Groq</option>
         <option value="gpt4o">GPT4o</option>
+        <option value="llama_cpp">Llama.cpp (Local)</option>
       </select>
     </div>
   );
