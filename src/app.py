@@ -39,11 +39,20 @@ async def update_env(env_update: EnvUpdate):
         set_key(env_path, "API_KEY", env_update.api_key)
         set_key(env_path, "PROVIDER", env_update.provider)
 
-        return {"message": "Environment variables updated successfully"}
+        return {"message": "Launching X Compass!"}
+        # TODO : REMOVE THIS WHEN YOU ADD LOADING PAGE
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 # TODO: Check if entered API key is valid or not.
+
+
+@app.get("/check-api-key")
+async def check_api_key():
+    load_dotenv()
+    api_key = os.getenv("API_KEY")
+    return {"has_api_key": bool(api_key)}
+
 
 if __name__ == "__main__":
     import uvicorn
