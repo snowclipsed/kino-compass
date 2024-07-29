@@ -1,17 +1,28 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { X, Upload, AlertCircle } from 'lucide-react';
+import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label } from 'recharts';
+import CartesianPlot from './CartesianPlot';
 
 const XCompass = ({ provider }) => {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState('');
   const [word, setWord] = useState('');
   const [coords, setCoords] = useState({ x: 0.5, y: 0.5 });
-  const [attributes, setAttributes] = useState('');
+  const [plotData, setPlotData] = useState([]);
   const [error, setError] = useState('');
   const [uploadStatus, setUploadStatus] = useState(null);
   const [panelWidth, setPanelWidth] = useState(400);
   const resizeRef = useRef(null);
+
+  const [attributes, setAttributes] = useState({
+    positive_x: '',
+    negative_x: '',
+    x_meaning: '',
+    positive_y: '',
+    negative_y: '',
+    y_meaning: ''
+  });
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -116,9 +127,9 @@ const XCompass = ({ provider }) => {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Left side - placeholder for future content */}
-      <div className="flex-grow bg-gray-100">
-        {/* Content for the left side will go here */}
+      {/* Left side - Cartesian Plot */}
+      <div className="flex-grow bg-gray-100 p-4">
+        <CartesianPlot coords={coords} attributes={attributes}/>
       </div>
 
       {/* Resizer */}
@@ -133,7 +144,7 @@ const XCompass = ({ provider }) => {
         style={{ width: `${panelWidth}px` }}
       >
         <div className="p-5">
-          <h2 className="text-2xl font-bold mb-4">Control Panel</h2>
+          <h2 className="text-2xl font-bold mb-4">𝕏 Compass</h2>
           
           <div className="mb-4">
             <div 
@@ -208,7 +219,7 @@ const XCompass = ({ provider }) => {
               Get Coords
             </button>
           </div>
-          <p className="mt-4">{coords.x}, {coords.y}</p>
+          <p className="mt-4">Current coordinates: ({coords.x.toFixed(4)}, {coords.y.toFixed(4)})</p>
         </div>
       </div>
     </div>
