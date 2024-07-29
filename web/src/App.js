@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState} from 'react';
 import ApiKeyInput from './components/ApiKeyInput';
 import ProviderSelection from './components/ProviderSelection';
 import XCompass from './components/XCompass.jsx';
@@ -37,9 +37,8 @@ function App() {
       setMessage('Please select a provider');
     }
   };
-
   if (isLaunched) {
-    return <XCompass />;
+    return <XCompass provider = {provider}/>;
   }
 
   return (

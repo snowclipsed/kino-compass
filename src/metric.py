@@ -2,17 +2,27 @@ import llama_cpp
 import json
 import llama_cpp.llama_tokenizer
 
-def load_model():
-    model = llama_cpp.Llama.from_pretrained(
-        repo_id="bartowski/Llama-3-Instruct-8B-SPPO-Iter3-GGUF",
-        filename="Llama-3-Instruct-8B-SPPO-Iter3-Q4_K_M.gguf",
-        tokenizer = llama_cpp.llama_tokenizer.LlamaHFTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct"),
-        n_ctx = 4096,
-        n_gpu_layers = -1,
-        verbose= False,
-        temperature=0.2
-    )
+def load_model(provider:str):
+    model_options = {
+        "llama_cpp" : llama_cpp.Llama.from_pretrained(
+            repo_id="bartowski/Llama-3-Instruct-8B-SPPO-Iter3-GGUF",
+            filename="Llama-3-Instruct-8B-SPPO-Iter3-Q4_K_M.gguf",
+            tokenizer = llama_cpp.llama_tokenizer.LlamaHFTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct"),
+            n_ctx = 4096,
+            n_gpu_layers = -1,
+            verbose= False,
+            temperature=0.2
+        ), 
+        "groq": None, 
+        "gpt4o":None,
+    }
+    model = model_options.get(provider, model_exception)
     return model
+
+def model_exception():
+    print("Wrong model")
+    raise ValueError("Invalid choice of model! Model does not appear in model list.")
+
 
 
 def chunk_text(text, max_chars=12000, overlap=100):
