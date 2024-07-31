@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timedelta, timezone
-
+from typing import List, Dict
 
 def load_tweets(tweet_path:str):
     with open(tweet_path) as f:
@@ -74,36 +74,48 @@ def divide_tweets_by_period(tweets: list, period_days: int) -> list:
     return sections
     
 
-def divide_tweets_by_period_text(tweets: list, period_days: int) -> list:
+def divide_tweets_by_period_text(tweets: List[Dict], period_days: int) -> List[str]:
     """
     Divide tweets into sections by time period and return a list of strings.
 
     :param tweets: List of tweet dictionaries
     :param period_days: Number of days for each period
     :return: List of strings, each containing tweets for the specified period
+    :raises ValueError: If tweets is not a list, period_days is not a positive integer, or tweets are improperly formatted
     """
-    
-    # Sort tweets by creation date
-    sorted_tweets = sorted(tweets, key=parse_tweet_date)
-    
+    if not isinstance(tweets, list):
+        raise ValueError("tweets must be a list")
+    if not all(isinstance(tweet, dict) and 'created_at' in tweet and 'text' in tweet for tweet in tweets):
+        raise ValueError("Each tweet must be a dictionary with 'created_at' and 'text' keys")
+    if not isinstance(period_days, int) or period_days <= 0:
+        raise ValueError("period_days must be a positive integer")
+    if not tweets:
+        return []
+
+    try:
+        # Sort tweets by creation date
+        sorted_tweets = sorted(tweets, key=parse_tweet_date)
+    except Exception as e:
+        raise ValueError(f"Error parsing tweet dates: {e}")
+
     # Initialize variables
     sections = []
     current_section = []
     current_period_start = parse_tweet_date(sorted_tweets[0])
     period_timedelta = timedelta(days=period_days)
-    
+
     # Iterate through sorted tweets and divide them into sections
     for tweet in sorted_tweets:
         tweet_date = parse_tweet_date(tweet)
         if tweet_date < current_period_start + period_timedelta:
             current_section.append(tweet['text'])
         else:
-            sections.append("\n ".join(current_section))
+            sections.append("\n".join(current_section))
             current_section = [tweet['text']]
             current_period_start = tweet_date
-            
+
     # Append the last section
     if current_section:
-        sections.append("\n ".join(current_section))
-    
+        sections.append("\n".join(current_section))
+
     return sections
