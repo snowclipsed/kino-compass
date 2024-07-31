@@ -8,19 +8,23 @@ from typing import Optional
 import os
 
 app = FastAPI()
-
-# Assume these imports are correct and the functions are implemented
-from .metric import load_model, is_slang, create_words, give_rating
+from .metric import Model, is_slang, create_words, give_rating
 from .data import load_tweets, extract_info, get_tweets_by_date, divide_tweets_by_period_text
 
 
+# Request classes
 class CoordinateRequest(BaseModel):
     word: str
     provider: str
     start_date: Optional[str] = None
     end_date: Optional[str] = None
 
+class ModelRequest(BaseModel):
+    provider: str
 
+# Global variables
+
+llm = None
 tweets = {}
 
 @app.post("/upload-tweets")
@@ -31,11 +35,11 @@ async def upload_file(file: UploadFile = File(...)):
         try:
             file_content_json = json.loads(file_content)
             tweets = file_content_json
-            return {"message": "JSON file uploaded successfully"}
+            return {"message": "JSON file uploaded successfully", "status": "success"}
         except json.JSONDecodeError:
-            return {"message" : "Invalid JSON File"}
+            return JSONResponse(status_code=400, content={"message": "Invalid JSON File", "status": "error"})
     else:
-        return{"message":"Please upload a JSON File!"}
+        return JSONResponse(status_code=400, content={"message": "Please upload a JSON File!", "status": "error"})
 
 @app.get("/files/{filename}")
 async def get_file(filename: str):
@@ -44,48 +48,73 @@ async def get_file(filename: str):
     
     return tweets[filename]
 
+@app.post("/load-model")
+async def load_model(request: ModelRequest):
+    global llm
+    if llm is None:
+        llm = Model()
+    try:
+        llm.provider = request.provider
+        llm.load_model()
+        return {"message": f"Model loaded successfully for provider: {request.provider}"}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/model-status")
+async def get_model_status():
+    return {
+        "provider": llm.provider if llm else None,
+        "model_loaded": llm.model is not None if llm else False
+    }
 
 @app.post("/get-coords")
 async def get_coordinates(request: CoordinateRequest):
+    global llm
     try:
-        # Load model using the provider from the request
-        model = load_model(provider=request.provider)
-        print("Model loaded successfully", type(model))
-        # Load tweets from the uploaded file
+        if not llm or not llm.model:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Model not loaded. Please load the model first.", "status": "error"}
+            )
+        
+        if not tweets:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "No tweets found. Please upload tweets first.", "status": "error"}
+            )
+
         extracted = extract_info(tweets)
-        print("Extracted info successfully")
         
         if request.start_date and request.end_date:
             extracted = get_tweets_by_date(extracted, request.start_date, request.end_date)
         period = 80
         tweet_text = divide_tweets_by_period_text(extracted, period)
-        
-        print(f"Extracted text in period of {period} successfully")
 
-        print(f"Checking if word {request.word} is slang")
-        is_slang_word = is_slang(model, request.word)
-        print("Checked if word is slang : ", is_slang_word)
-        attributes = create_words(model, request.word, is_slang=is_slang_word)
-        print("Created words successfully")
-        print("Attributes : ", attributes)
+        is_slang_word = is_slang(llm.model, request.word)
+        attributes = create_words(llm.model, request.word, is_slang=is_slang_word)
         
         ratings = []
         for text in tweet_text:
-            ratings.append(give_rating(text, model, request.word, attributes['x_meaning'], attributes['positive_x'], attributes['negative_x'], attributes['y_meaning'], attributes['positive_y'], attributes['negative_y']))
+            ratings.append(give_rating(text, llm.model, request.word, attributes['x_meaning'], attributes['positive_x'], attributes['negative_x'], attributes['y_meaning'], attributes['positive_y'], attributes['negative_y']))
         
         mean_x = sum(rating[0] for rating in ratings) / len(ratings)
         mean_y = sum(rating[1] for rating in ratings) / len(ratings)
         mean_rating = (mean_x, mean_y)
-        print("Rating: ", mean_rating)
-        del model
 
-        #TODO: FIGURE OUT HOW TO UNLOAD THE GPU MEMORY RELIABLY!
         return {"coordinates": mean_rating, "attributes": attributes}
-    except Exception as e:
+    except Exception as e: 
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# TODO : FIGURE OUT HOW TO CANCEL THE REQUEST!
+@app.post("/reset")
+async def reset_state():
+    global llm, tweets
+    llm.unload_model()
+    tweets = {}
+    return {"message": "State has been reset"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -101,20 +130,15 @@ class EnvUpdate(BaseModel):
 @app.post("/update-env")
 async def update_env(env_update: EnvUpdate):
     try:
-        # Load existing .env file
-        env_path = ".env"  # Adjust this path as needed
+        env_path = ".env"
         load_dotenv(env_path)
 
         set_key(env_path, "API_KEY", env_update.api_key)
         set_key(env_path, "PROVIDER", env_update.provider)
 
         return {"message": "Launching X Compass!"}
-        # TODO : REMOVE THIS WHEN YOU ADD LOADING PAGE
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# TODO: Check if entered API key is valid or not.
-
 
 @app.get("/check-api-key")
 async def check_api_key():
@@ -122,7 +146,7 @@ async def check_api_key():
     api_key = os.getenv("API_KEY")
     return {"has_api_key": bool(api_key)}
 
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
