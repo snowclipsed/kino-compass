@@ -132,6 +132,11 @@ const handleMouseMove = useCallback((e) => {
     }
   }, [word, provider]);
 
+
+  const handleReload = () => {
+    window.location.reload();
+  };
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Left side - Cartesian Plot */}
@@ -152,8 +157,7 @@ const handleMouseMove = useCallback((e) => {
         style={{ width: `${panelWidth}px` }}
       >
         <div className="p-5">
-          <h2 className="text-2xl font-bold mb-4 text-center">𝕏 Compass</h2>
-          
+          <h2 className="text-2xl font-bold mb-4 text-center cursor-pointer" onClick={handleReload}>𝕏 Compass</h2> 
           <div className="mb-4">
             <div 
               className="border-2 border-dashed border-gray-400 rounded-lg p-8 text-center mb-4"
@@ -170,7 +174,8 @@ const handleMouseMove = useCallback((e) => {
                 className="hidden"
                 id="fileInput"
               />
-              <label htmlFor="fileInput" className="bg-[#1DA1F2] text-white px-4 py-2 rounded-full cursor-pointer hover:bg-[#1a91da]">                Browse Files
+              <label htmlFor="fileInput" className="bg-[#1DA1F2] text-white px-4 py-2 rounded-full cursor-pointer hover:bg-[#1a91da]">               
+                Browse Files
               </label>
             </div>
             

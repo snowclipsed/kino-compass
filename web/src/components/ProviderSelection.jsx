@@ -8,7 +8,7 @@ const ProviderSelection = ({ provider, setProvider }) => {
         id="provider"
         value={provider}
         onChange={(e) => setProvider(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-3 py-2 bg-white border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">Select a provider</option>
         <option value="groq">Groq (Llama 3)</option>

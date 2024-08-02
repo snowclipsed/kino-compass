@@ -57,6 +57,10 @@ function App() {
     }
   };
 
+  const handleReload = () => {
+    window.location.reload();
+  };
+
   useEffect(() => {
     return () => {
       // Reset the state on unmount
@@ -73,8 +77,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
-      <h1 className="text-4xl font-bold mb-8">𝕏 Compass</h1>
+    <div className="min-h-screen bg-white text-black flex flex-col items-center justify-center p-4">
+      <h1 className="text-4xl font-bold mb-8 cursor-pointer" onClick={handleReload}>𝕏 Compass</h1>
       <div className="w-full max-w-md space-y-6">
         <ProviderSelection provider={provider} setProvider={setProvider} />
         {['groq', 'gpt4o'].includes(provider) && (
@@ -82,7 +86,7 @@ function App() {
         )}
         <button
           onClick={handleLaunch}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition duration-300"
+          className="w-full bg-[#1DA1F2] text-white py-2 px-4 rounded hover:bg-blue-700 transition duration-300"
         >
           Launch
         </button>
