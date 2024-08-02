@@ -27,10 +27,6 @@ class Model:
         self.model = model_loader()
         return self.model
 
-    def unload_model(self):
-        self.provider = None
-        self.model = None
-
     def _load_llama_cpp(self):
         return llama_cpp.Llama.from_pretrained(
             repo_id="bartowski/Llama-3-Instruct-8B-SPPO-Iter3-GGUF",
@@ -49,6 +45,10 @@ class Model:
     def _load_gpt4o(self):
         # Implement GPT-4 loading here
         raise NotImplementedError("GPT-4 loading not implemented yet")
+
+    def unload_model(self):
+        self.model = None
+        self.provider = None
 
 def chunk_text(text:str, max_chars:int=12000, overlap:int=100):
     words = text.split()
@@ -196,6 +196,8 @@ def give_rating(text: str, model: Any, word: str, x_aspect: str, x_positive: str
     :return: A list containing the normalized X and Y values.
     :raises ValueError: If any input parameter is invalid or if the model's response is invalid.
     """
+    min_value = -10
+    max_value = 10
     if not isinstance(text, str):
         raise ValueError("text must be a string")
     if not isinstance(word, str) or not isinstance(x_aspect, str) or not isinstance(x_positive, str) or not isinstance(x_negative, str) or not isinstance(y_aspect, str) or not isinstance(y_positive, str) or not isinstance(y_negative, str):
@@ -208,8 +210,8 @@ def give_rating(text: str, model: Any, word: str, x_aspect: str, x_positive: str
     The Y aspect is "{y_aspect}" and the positive Y axis is {y_positive}, and the negative Y axis is {y_negative}.
     Your job is to provide a coordinate for the combined tweets on the cartesian plane.
     Each tweet is separated by a new line.
-    The range for the X and Y axis is from -5 to 5. Please provide a value for the text based on what you feel about the text.
-    Strictly stay within the range of -5 to 5. Do not go over.
+    The range for the X and Y axis is from {min_value} to {max_value}. Please provide a value for the text based on what you feel about the text.
+    Strictly stay within the range of {min_value} to {max_value}. Do not go over.
     If X is positive, it means the text is more {x_positive} and if X is negative, it means the text is more {x_negative}.
     If Y is positive, it means the text is more {y_positive} and if Y is negative, it means the text is more {y_negative}.
     Be creative with your ratings and be genuine.
@@ -248,8 +250,8 @@ def give_rating(text: str, model: Any, word: str, x_aspect: str, x_positive: str
                 raise ValueError("Invalid response format from model")
             x_value = values["x_value"]
             y_value = values["y_value"]
-            if not (-5 <= x_value <= 5) or not (-5 <= y_value <= 5):
-                raise ValueError("x_value and y_value must be within the range of -5 to 5")
+            if not (min_value <= x_value <= max_value) or not (min_value <= y_value <= max_value):
+                raise ValueError(f"x_value and y_value must be within the range of {min_value} to {max_value}")
             x_values.append(x_value)
             y_values.append(y_value)
         except Exception as e:
@@ -260,7 +262,7 @@ def give_rating(text: str, model: Any, word: str, x_aspect: str, x_positive: str
     y_sum = sum(y_values)
 
     # Normalize the sums to be between -5 and 5
-    x_normalized = normalize_value(x_sum, min(x_sum, -5), max(x_sum, 5), -5, 5)
-    y_normalized = normalize_value(y_sum, min(y_sum, -5), max(y_sum, 5), -5, 5)
+    x_normalized = normalize_value(x_sum, min(x_sum, min_value), max(x_sum, max_value), min_value, max_value)
+    y_normalized = normalize_value(y_sum, min(y_sum, -5), max(y_sum, max_value), min_value, max_value)
 
     return [round(x_normalized), round(y_normalized)]

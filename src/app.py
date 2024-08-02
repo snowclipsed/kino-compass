@@ -4,12 +4,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv, set_key
 import json
-from typing import Optional
+from typing import Optional, List
 import os
 
 app = FastAPI()
 from .metric import Model, is_slang, create_words, give_rating
-from .data import load_tweets, extract_info, get_tweets_by_date, divide_tweets_by_period_text
+from .data import extract_info, get_tweets_by_date, divide_tweets_by_period_text
 
 
 # Request classes
@@ -24,35 +24,29 @@ class ModelRequest(BaseModel):
 
 # Global variables
 
-llm = None
-tweets = {}
-
+llm = Model()
+tweets:List
+tweets = []
 @app.post("/upload-tweets")
 async def upload_file(file: UploadFile = File(...)):
     global tweets
+    tweet_content = {}
     if file.filename.endswith('.json'):
         file_content = await file.read()
         try:
             file_content_json = json.loads(file_content)
-            tweets = file_content_json
+            tweet_content = file_content_json
+            tweets = extract_info(tweet_content)
             return {"message": "JSON file uploaded successfully", "status": "success"}
         except json.JSONDecodeError:
             return JSONResponse(status_code=400, content={"message": "Invalid JSON File", "status": "error"})
     else:
         return JSONResponse(status_code=400, content={"message": "Please upload a JSON File!", "status": "error"})
 
-@app.get("/files/{filename}")
-async def get_file(filename: str):
-    if filename not in tweets:
-        return JSONResponse(status_code=404, content={"message": "File not found"})
-    
-    return tweets[filename]
-
 @app.post("/load-model")
 async def load_model(request: ModelRequest):
     global llm
-    if llm is None:
-        llm = Model()
+
     try:
         llm.provider = request.provider
         llm.load_model()
@@ -71,7 +65,7 @@ async def get_model_status():
 
 @app.post("/get-coords")
 async def get_coordinates(request: CoordinateRequest):
-    global llm
+    global llm, tweets
     try:
         if not llm or not llm.model:
             return JSONResponse(
@@ -85,12 +79,10 @@ async def get_coordinates(request: CoordinateRequest):
                 content={"error": "No tweets found. Please upload tweets first.", "status": "error"}
             )
 
-        extracted = extract_info(tweets)
-        
         if request.start_date and request.end_date:
-            extracted = get_tweets_by_date(extracted, request.start_date, request.end_date)
+            tweets = get_tweets_by_date(tweets, request.start_date, request.end_date)
         period = 80
-        tweet_text = divide_tweets_by_period_text(extracted, period)
+        tweet_text = divide_tweets_by_period_text(tweets, period)
 
         is_slang_word = is_slang(llm.model, request.word)
         attributes = create_words(llm.model, request.word, is_slang=is_slang_word)

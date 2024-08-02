@@ -10,7 +10,7 @@ def save_tweets(tweets, tweet_path:str):
     with open(tweet_path, 'w') as f:
         json.dump(tweets, f)
 
-def extract_info(tweets:list)->list:
+def extract_info(tweets:List)->List:
     return [
         {
             "id": tweet["tweet"]["id"], 
@@ -24,7 +24,7 @@ def parse_tweet_date(tweet):
 def get_tweet_text(tweet):
     return tweet['text']
 
-def get_tweets_by_date(tweets:list, start_date, end_date=None)->list:
+def get_tweets_by_date(tweets:List, start_date, end_date=None)->List:
     start_date = datetime.strptime(start_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
         
     if end_date is None:
@@ -39,7 +39,7 @@ def get_tweets_by_date(tweets:list, start_date, end_date=None)->list:
 
     return filtered_tweets
 
-def divide_tweets_by_period(tweets: list, period_days: int) -> list:
+def divide_tweets_by_period(tweets: List, period_days: int) -> List:
     """
     Divide tweets into sections by time period and return a list of them.
 
