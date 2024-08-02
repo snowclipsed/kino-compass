@@ -5,11 +5,15 @@ const CartesianPlot = ({ coords, attributes }) => {
   const axisLabel = "absolute flex items-center justify-center text-sm text-gray-600";
   const axisLine = "absolute bg-gray-300";
 
-  // Function to convert the range -5 to 5 to 0% to 100%
-  const scaleCoordinate = (value) => ((value + 5) / 10) * 100;
+
+  const rangeValue = 5;
+  const scaleCoordinate = (value, rangeValue) => ((value + rangeValue) / (2 * rangeValue)) * 100;
+
+
+
 
   return (
-    <div className="mt-4 aspect-square bg-gray-100 p-4 relative flex items-center justify-center" style={{ height: '100vh' }}>
+    <div className="mt-4 aspect-square bg-white p-4 relative flex items-center justify-center" style={{ height: '100vh' }}>
       <div className="w-3/4 h-3/4 bg-white shadow-md relative">
         {/* Horizontal axis line */}
         <div className={`${axisLine} left-0 top-1/2 w-full h-px`} />
@@ -22,12 +26,12 @@ const CartesianPlot = ({ coords, attributes }) => {
         <div className={`${axisLabel} right-0 top-1/2 -translate-y-1/2`}>{attributes.positive_x}</div>
         {/* Point and coordinate label */}
         <div className="absolute" style={{
-          left: `${scaleCoordinate(data.x)}%`,
-          top: `${100 - scaleCoordinate(data.y)}%`,
+          left: `${scaleCoordinate(data.x, rangeValue)}%`,
+          top: `${100 - scaleCoordinate(data.y, rangeValue)}%`,
           transform: 'translate(-50%, -50%)'
         }}>
-          <div className="w-2 h-2 bg-blue-500 rounded-full" />
-          <div className="absolute top-0 left-0 transform -translate-y-full -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-xs whitespace-nowrap">
+          <div className="w-2 h-2 bg-[#1DA1F2] rounded-full" />
+          <div className="absolute top-0 left-10 transform -translate-y-full -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-xs whitespace-nowrap">
             ({data.x.toFixed(2)}, {data.y.toFixed(2)})
           </div>
         </div>

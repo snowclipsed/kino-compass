@@ -1,19 +1,17 @@
 import React, { useCallback, useState, useRef } from 'react';
 import axios from 'axios';
-import { X, Upload, AlertCircle, CheckCircle } from 'lucide-react';
-import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label } from 'recharts';
+import { Upload, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import CartesianPlot from './CartesianPlot';
 
 const XCompass = ({ provider }) => {
-  const [file, setFile] = useState(null);
   const [fileMessage, setFileMessage] = useState({ text: '', type: '' });
   const [word, setWord] = useState('');
   const [wordMessage, setWordMessage] = useState('');
   const [coords, setCoords] = useState({ x: 0.0, y: 0.0 });
-  const [plotData, setPlotData] = useState([]);
   const [error, setError] = useState('');
   const [uploadStatus, setUploadStatus] = useState(null);
   const [panelWidth, setPanelWidth] = useState(400);
+  const [isLoading, setIsLoading] = useState(false);
   const resizeRef = useRef(null);
 
   const [attributes, setAttributes] = useState({
@@ -49,7 +47,6 @@ const handleMouseMove = useCallback((e) => {
 
   const onDrop = useCallback((acceptedFiles) => {
     const selectedFile = acceptedFiles[0];
-    setFile(selectedFile);
     setUploadStatus({
       name: selectedFile.name,
       size: selectedFile.size,
@@ -103,6 +100,7 @@ const handleMouseMove = useCallback((e) => {
     }
     setError(null);
     setFileMessage({ text: '', type: '' });
+    setIsLoading(true);
 
     try {
       const response = await axios.post('http://localhost:8000/get-coords', {
@@ -129,21 +127,23 @@ const handleMouseMove = useCallback((e) => {
         console.error('Error fetching coordinates:', error);
         setError('Failed to fetch coordinates');
       }
+    } finally {
+      setIsLoading(false);
     }
   }, [word, provider]);
 
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Left side - Cartesian Plot */}
-      <div className="flex-grow bg-gray-100 p-4 relative flex items-center justify-center">
+      <div className="flex-grow bg-white p-4 relative flex items-center justify-center">
         <CartesianPlot coords={coords} attributes={attributes}/>
       </div>
 
       {/* Resizer */}
       <div
-        className="w-1 bg-gray-300 cursor-col-resize"
+        className="w-1 bg-gray-200 cursor-col-resize"
         onMouseDown={(e) => startResize(e)}
-        style={{ width: '5px', cursor: 'col-resize', backgroundColor: 'gray' }}
+        style={{ width: '5px', cursor: 'col-resize'}}
       />
 
       {/* Right side - Control Panel */}
@@ -152,17 +152,17 @@ const handleMouseMove = useCallback((e) => {
         style={{ width: `${panelWidth}px` }}
       >
         <div className="p-5">
-          <h2 className="text-2xl font-bold mb-4">𝕏 Compass</h2>
+          <h2 className="text-2xl font-bold mb-4 text-center">𝕏 Compass</h2>
           
           <div className="mb-4">
             <div 
-              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4"
+              className="border-2 border-dashed border-gray-400 rounded-lg p-8 text-center mb-4"
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             >
-              <Upload className="mx-auto text-cyan-500 mb-4" size={48} />
+              <Upload className="mx-auto text-black mb-4" size={48} />
               <p className="mb-2">Drag files to upload</p>
-              <p className="text-sm text-gray-500 mb-4">or</p>
+              <p className="text-sm text-black mb-4">or</p>
               <input
                 type="file"
                 accept=".json"
@@ -170,8 +170,7 @@ const handleMouseMove = useCallback((e) => {
                 className="hidden"
                 id="fileInput"
               />
-              <label htmlFor="fileInput" className="bg-cyan-500 text-white px-4 py-2 rounded-full cursor-pointer">
-                Browse Files
+              <label htmlFor="fileInput" className="bg-[#1DA1F2] text-white px-4 py-2 rounded-full cursor-pointer hover:bg-[#1a91da]">                Browse Files
               </label>
             </div>
             
@@ -186,7 +185,7 @@ const handleMouseMove = useCallback((e) => {
                 <div className="bg-gray-100 rounded-full overflow-hidden">
                   <div 
                     className={`py-2 px-4 ${
-                      uploadStatus.status === 'completed' ? 'bg-blue-500' : 
+                      uploadStatus.status === 'completed' ? 'bg-[#1DA1F2]' : 
                       uploadStatus.status === 'error' ? 'bg-red-500' : 'bg-cyan-500'
                     }`}
                     style={{ width: `${uploadStatus.progress}%` }}
@@ -226,20 +225,26 @@ const handleMouseMove = useCallback((e) => {
               value={word}
               onChange={(e) => setWord(e.target.value)}
               placeholder="Enter a word"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 p-2"
+              className="mt-1 block w-full rounded-md border-gray-500 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 p-2"
             />
             {wordMessage && <p className="text-red-500 mt-1">{wordMessage}</p>}
           </div>
-          <div className='mb-4'>
+          <div className='mb-4 relative flex items-center justify-center'>
             <button
               onClick={fetchCoordinates}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              className="bg-[#1DA1F2] text-white px-4 py-2 rounded-full hover:bg-[#1a91da]"
+              disabled={isLoading}
             >
-              Get Coords
+              Get Results!
             </button>
           </div>
-          {error && <p className="text-red-500 mt-4">{error}</p>}
-          <p className="mt-4">Current coordinates: ({coords.x.toFixed(4)}, {coords.y.toFixed(4)})</p>
+              {isLoading && (
+                <div className="flex justify-center items-center mt-4">
+                  <Loader className="animate-spin text-blue-500" size={24} />
+                  <span className="ml-2 text-blue-500">Loading...</span>
+                </div>
+              )}
+            {error && <p className="text-red-500 mt-4">{error}</p>}
         </div>
       </div>
     </div>
