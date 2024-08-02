@@ -104,7 +104,7 @@ async def get_coordinates(request: CoordinateRequest):
 async def reset_state():
     global llm, tweets
     llm.unload_model()
-    tweets = {}
+    tweets = [] 
     return {"message": "State has been reset"}
 
 app.add_middleware(
