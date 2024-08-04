@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ApiKeyInput from './components/ApiKeyInput';
 import ProviderSelection from './components/ProviderSelection';
+import axios from 'axios';
 import XCompass from './components/XCompass.jsx';
 
 function App() {
@@ -14,46 +15,29 @@ function App() {
       setMessage('Please select a provider');
       return;
     }
-
     if (['groq', 'gpt4o'].includes(provider) && !apiKey) {
       setMessage('Please enter an API key');
       return;
     }
-
+  
     try {
-      let endpoint, body;
-
+      let updateEnvResponse, loadModelResponse;
+  
       if (provider === 'llama_cpp') {
-        endpoint = 'http://localhost:8000/load-model';
-        body = { provider };
+        loadModelResponse = await axios.post('http://localhost:8000/load-model', { provider });
       } else {
-        endpoint = 'http://localhost:8000/update-env';
-        body = { api_key: apiKey, provider };
+        updateEnvResponse = await axios.post('http://localhost:8000/update-env', { api_key: apiKey, provider });
+        loadModelResponse = await axios.post('http://localhost:8000/load-model', { provider });
       }
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const rawResponse = await response.text();
-      console.log('Raw response:', rawResponse);
-
-      let data;
-      try {
-        data = JSON.parse(rawResponse);
-      } catch (parseError) {
-        console.error('Error parsing JSON:', parseError);
-        setMessage('Error: Received invalid response from server');
-        return;
-      }
-
-      setMessage(data.message || `Launched ${provider} successfully`);
+  
+      const responses = [updateEnvResponse, loadModelResponse].filter(Boolean);
+      console.log('responses:', loadModelResponse);
+      const combinedMessage = responses.map(r => r.data.message).join('. ');
+      setMessage(combinedMessage || `Launched ${provider} successfully`);
       setIsLaunched(true);
     } catch (error) {
       console.error('Error:', error);
-      setMessage(`Error launching ${provider}: ${error.message}`);
+      setMessage(`Error launching ${provider}: ${error.response?.data?.message || error.message}`);
     }
   };
 

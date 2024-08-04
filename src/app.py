@@ -8,7 +8,7 @@ from typing import Optional, List
 import os
 
 app = FastAPI()
-from .metric import Model, is_slang, create_words, give_rating
+from .metric import Model
 from .data import extract_info, get_tweets_by_date, divide_tweets_by_period_text
 
 
@@ -46,7 +46,6 @@ async def upload_file(file: UploadFile = File(...)):
 @app.post("/load-model")
 async def load_model(request: ModelRequest):
     global llm
-
     try:
         llm.provider = request.provider
         llm.load_model()
@@ -68,6 +67,7 @@ async def get_coordinates(request: CoordinateRequest):
     global llm, tweets
     try:
         if not llm or not llm.model:
+            print("Model not loaded", type(llm), type(llm.model), llm.provider)
             return JSONResponse(
                 status_code=400,
                 content={"error": "Model not loaded. Please load the model first.", "status": "error"}
@@ -81,15 +81,12 @@ async def get_coordinates(request: CoordinateRequest):
 
         if request.start_date and request.end_date:
             tweets = get_tweets_by_date(tweets, request.start_date, request.end_date)
-        period = 80
+        period = 100
         tweet_text = divide_tweets_by_period_text(tweets, period)
-
-        is_slang_word = is_slang(llm.model, request.word)
-        attributes = create_words(llm.model, request.word, is_slang=is_slang_word)
-        
+        attributes = llm.create_words(request.word)
         ratings = []
         for text in tweet_text:
-            ratings.append(give_rating(text, llm.model, request.word, attributes['x_meaning'], attributes['positive_x'], attributes['negative_x'], attributes['y_meaning'], attributes['positive_y'], attributes['negative_y']))
+            ratings.append(llm.give_rating(text, request.word, attributes['x_aspect'], attributes['x_positive'], attributes['x_negative'], attributes['y_aspect'], attributes['y_positive'], attributes['y_negative']))
         
         mean_x = sum(rating[0] for rating in ratings) / len(ratings)
         mean_y = sum(rating[1] for rating in ratings) / len(ratings)
