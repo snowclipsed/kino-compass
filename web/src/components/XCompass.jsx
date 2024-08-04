@@ -15,12 +15,12 @@ const XCompass = ({ provider }) => {
   const resizeRef = useRef(null);
 
   const [attributes, setAttributes] = useState({
-    positive_x: '',
-    negative_x: '',
-    x_meaning: '',
-    positive_y: '',
-    negative_y: '',
-    y_meaning: ''
+    x_positive: '',
+    x_negative: '',
+    x_aspect: '',
+    y_positive: '',
+    y_negative: '',
+    y_aspect: ''
   });
 
 
