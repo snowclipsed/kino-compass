@@ -29,6 +29,13 @@ class Model:
         self.provider: Optional[str] = None
 
     def load_model(self) -> Union[llama_cpp.Llama, Groq, None]:
+        """
+        This function loads the model based on the provider specified.
+        The model is stored in the class attribute `model`.
+        ----------
+        Returns:
+            Union[llama_cpp.Llama, Groq, None]: The loaded model based on the provider.
+        """
         if self.provider is None:
             raise ValueError("Provider must be set before loading the model")
 
@@ -84,125 +91,16 @@ class Model:
 
         return chunks
 
-    def is_slang(self, word: str):
-        if self.provider == 'llama_cpp' and isinstance(self.model, llama_cpp.Llama):
-            response = self.model.create_chat_completion(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": f"""Here is a {word}. Provide if it is an internet slang or not in the provided JSON schema. Here is the JSON schema:
-                        """
-                    }
-                ],
-                response_format={
-                    "type": "json_object",
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "is_internet_slang": {"type": "boolean"},
-                        },
-                        "required": ["is_internet_slang"],
-                    }
-                },
-                stream=False,
-            )
-            return json.loads(response["choices"][0]["message"]["content"])["is_internet_slang"]
-
-        elif self.provider == 'groq' and isinstance(self.model, Groq):
-            response = self.model.chat.completions.create(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a slang detector. You will be given a word and your job is to give a JSON output.\n"
-                        f" The JSON object must use the schema: {json.dumps(Slang.model_json_schema(), indent=2)}",
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Is this word {word} slang or not?",
-                    },
-                ],
-                model="llama3-8b-8192",
-                temperature=0,
-                stream=False,
-                response_format={"type": "json_object"},
-            )
-            return json.loads(response.choices[0].message.content)["properties"]["is_internet_slang"]
-        else:
-            raise ValueError(f"Model undefined : {type(self.model)}")
-
-    def word_meaning(self, word: str):
-        prompt = "You are a professional in language and culture. Define the given word in context of a person in a single line only. The word could be of pop culture origin or internet slang."
-        if self.provider == 'llama_cpp' and isinstance(self.model, llama_cpp.Llama):
-            response = self.model(
-                prompt=prompt + "Here is the word: " + word,
-                max_tokens=100,
-                stream=False,
-            )
-            return response["choices"][0]["text"]
-        if self.provider == 'groq' and isinstance(self.model, Groq):
-            response = self.model.chat.completions.create(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": prompt
-                    },
-                    {
-                        "role": "user",
-                        "content": "I have a word and you must give me its meaning. Here is the word: " + word
-                    }
-                ],
-                model="llama3-8b-8192",
-                stream=False,
-                max_tokens=120
-            )
-            return response.choices[0].message.content
-
-    def give_context(self, base_word: str, x_positive: str, x_negative: str, y_positive: str, y_negative: str):
-        if isinstance(self.model, llama_cpp.Llama): 
-
-            response = self.model.create_chat_completion(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": f"""Provide very short context for the word {base_word}
-                        different aspects of the word lie on the cartesian axis
-                        where {x_positive} and {x_negative} are on the x-axis and {y_positive} and {y_negative} are on the y-axis."""
-                    }
-                ],
-                response_format={
-                    "type": "string",
-                },
-            )
-            return response
-        if isinstance(self.model, Groq):
-            response = self.model.chat.completions.create(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are a professional in language and culture. 
-                        You will be provided with a word which will be related to a topic, individual, internet culture or slang, and you must define 4 different aspects of the word, such that you can put it on a cartesian plane. 
-                        The x-axis and y-axis must be defined in the context of the word.
-                        The x-axis must have two aspects, one positive and one negative, and the same for the y-axis.
-                        The positive and negative aspects must be opposites of each other.
-                        """,
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""Provide very short context for the word {base_word}
-                        different aspects of the word lie on the cartesian axis
-                        where {x_positive} and {x_negative} are on the x-axis and {y_positive} and {y_negative} are on the y-axis."""
-
-                    }
-                ],
-                model="llama3-8b-8192",
-                stream=False
-            )
-            return response
-
-      
-
     def create_words(self, word: str):
-
+        """
+        This function generates the aspects of a word that can be put on a cartesian plane.
+        The aspects are returned in a JSON format.
+        ----------
+        Args:
+            word (str): The word for which aspects are to be generated.
+        Returns:
+            dict: The aspects of the word in JSON format.
+        """
         prompt = f"""You are given the word {word}. You must define the aspects of the word that can be put on a cartesian plane. Return the output in JSON format.
                          """
         messages = [
@@ -248,6 +146,19 @@ class Model:
     def give_rating(self, text: str, word: str, x_aspect: str, x_positive: str, x_negative: str, y_aspect: str, y_positive: str, y_negative: str) -> List[int]:
         """
         Give a rating for the compiled tweets based on provided aspects and their positive and negative directions.
+        ----------
+        Args:
+            text (str): The compiled tweets to rate
+            word (str): The main factor for the ratings
+            x_aspect (str): The aspect of the main factor on the x-axis
+            x_positive (str): The positive direction of the x_aspect
+            x_negative (str): The negative direction of the x_aspect
+            y_aspect (str): The aspect of the main factor on the y-axis
+            y_positive (str): The positive direction of the y_aspect
+            y_negative (str): The negative direction of the y_aspect
+        
+        Returns:
+            List[int]: The rating as a coordinate on the cartesian plane
         """
         min_value = -10
         max_value = 10
@@ -265,7 +176,7 @@ class Model:
         """
         system = {
                     "role": "system",
-                    "content": """You are a social media analyst. You are provided with a compiled list of tweets from a user and a cartesian plane on which the tweets are to be ranked based on some defined factors.
+                    "content": f"""You are a social media analyst. You are provided with a compiled list of tweets from a user and a cartesian plane on which the tweets are to be ranked based on some defined factors.
                     Each axis corresponds to an aspect of the tweet, and has two types of factors, positive and negative.
                     Hence there is the x-axis with the factors x_positive and x_negative and the y-axis with the factors y_positive and y_negative.
                     Your job is to provide a rating of the collected tweets, which will be a coordinate for the combined tweets on the cartesian plane.
@@ -274,7 +185,7 @@ class Model:
                     The X score is called x_value and the Y score is called y_value.
                     The same goes for the y-axis.
                     Each tweet is separated by a new line.
-                    The range for the X and Y axis is from -10 to 10. Please provide a value for the text based on what you feel about the text.
+                    The range for the X and Y axis is from {min_value} to {max_value}. Please provide a value for the text based on what you feel about the text.
                     Provide your answer in JSON format.
                     """
                     f"The JSON object must use the schema: {json.dumps(Rating.model_json_schema(), indent=2)}",
@@ -364,3 +275,154 @@ class Model:
         y_normalized = self.normalize_value(y_sum, min(y_sum, -5), max(y_sum, max_value), min_value, max_value)
 
         return [round(x_normalized), round(y_normalized)]
+
+
+    ### UNIMPLEMENTED FUNCTIONS ###
+
+    def word_meaning(self, word: str):
+        """
+        UNIMPLEMENTED. This function is not used in the current version of the application.
+        This function generates the meaning of a word in context of a person in a single line.
+        ----------
+
+        Args:
+            word (str): The word for which meaning is to be generated.
+        Returns:
+            str: The meaning of the word in context of a person in a single line.
+        """
+        prompt = "You are a professional in language and culture. Define the given word in context of a person in a single line only. The word could be of pop culture origin or internet slang."
+        if self.provider == 'llama_cpp' and isinstance(self.model, llama_cpp.Llama):
+            response = self.model(
+                prompt=prompt + "Here is the word: " + word,
+                max_tokens=100,
+                stream=False,
+            )
+            return response["choices"][0]["text"]
+        if self.provider == 'groq' and isinstance(self.model, Groq):
+            response = self.model.chat.completions.create(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": prompt
+                    },
+                    {
+                        "role": "user",
+                        "content": "I have a word and you must give me its meaning. Here is the word: " + word
+                    }
+                ],
+                model="llama3-8b-8192",
+                stream=False,
+                max_tokens=120
+            )
+            return response.choices[0].message.content
+
+    def give_context(self, base_word: str, x_positive: str, x_negative: str, y_positive: str, y_negative: str):
+        """
+        UNIMPLEMENTED. This function is not used in the current version of the application.
+        This function generates the context for a word based on the aspects provided.
+        ----------
+        Args:
+            base_word (str): The word for which context is to be generated.
+            x_positive (str): The positive aspect of the x-axis.
+            x_negative (str): The negative aspect of the x-axis.
+            y_positive (str): The positive aspect of the y-axis.
+            y_negative (str): The negative aspect of the y-axis.
+        Returns:
+            str: The context for the word based on the aspects provided.
+        """
+        if isinstance(self.model, llama_cpp.Llama): 
+
+            response = self.model.create_chat_completion(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"""Provide very short context for the word {base_word}
+                        different aspects of the word lie on the cartesian axis
+                        where {x_positive} and {x_negative} are on the x-axis and {y_positive} and {y_negative} are on the y-axis."""
+                    }
+                ],
+                response_format={
+                    "type": "string",
+                },
+            )
+            return response
+        if isinstance(self.model, Groq):
+            response = self.model.chat.completions.create(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """You are a professional in language and culture. 
+                        You will be provided with a word which will be related to a topic, individual, internet culture or slang, and you must define 4 different aspects of the word, such that you can put it on a cartesian plane. 
+                        The x-axis and y-axis must be defined in the context of the word.
+                        The x-axis must have two aspects, one positive and one negative, and the same for the y-axis.
+                        The positive and negative aspects must be opposites of each other.
+                        """,
+                    },
+                    {
+                        "role": "user",
+                        "content": f"""Provide very short context for the word {base_word}
+                        different aspects of the word lie on the cartesian axis
+                        where {x_positive} and {x_negative} are on the x-axis and {y_positive} and {y_negative} are on the y-axis."""
+
+                    }
+                ],
+                model="llama3-8b-8192",
+                stream=False
+            )
+            return response
+        
+    def is_slang(self, word: str):
+        """
+        UNIMPLEMENTED. This function is not used in the current version of the application.
+        This function determines if a word is internet slang or not.
+        ----------
+        Args:
+            word (str): The word to check if it is internet slang or not.
+
+        Returns:
+            bool: True if the word is internet slang, False
+        """
+        if self.provider == 'llama_cpp' and isinstance(self.model, llama_cpp.Llama):
+            response = self.model.create_chat_completion(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"""Here is a {word}. Provide if it is an internet slang or not in the provided JSON schema. Here is the JSON schema:
+                        """
+                    }
+                ],
+                response_format={
+                    "type": "json_object",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "is_internet_slang": {"type": "boolean"},
+                        },
+                        "required": ["is_internet_slang"],
+                    }
+                },
+                stream=False,
+            )
+            return json.loads(response["choices"][0]["message"]["content"])["is_internet_slang"]
+
+        elif self.provider == 'groq' and isinstance(self.model, Groq):
+            response = self.model.chat.completions.create(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a slang detector. You will be given a word and your job is to give a JSON output.\n"
+                        f" The JSON object must use the schema: {json.dumps(Slang.model_json_schema(), indent=2)}",
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Is this word {word} slang or not?",
+                    },
+                ],
+                model="llama3-8b-8192",
+                temperature=0,
+                stream=False,
+                response_format={"type": "json_object"},
+            )
+            return json.loads(response.choices[0].message.content)["properties"]["is_internet_slang"]
+        else:
+            raise ValueError(f"Model undefined : {type(self.model)}")
