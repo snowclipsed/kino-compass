@@ -3,14 +3,28 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Dict
 
 def load_tweets(tweet_path:str):
+    """
+    This function loads tweets from a JSON file.
+    """
     with open(tweet_path) as f:
         return json.load(f)
 
 def save_tweets(tweets, tweet_path:str):
+    """
+    This function saves tweets to a JSON file.
+    """
     with open(tweet_path, 'w') as f:
         json.dump(tweets, f)
 
 def extract_info(tweets:List)->List:
+    """
+    This function extracts the tweet id, text, and creation date from a list of tweet dictionaries.
+    ----------
+    Args:
+        tweets: List - List of tweet dictionaries
+    Returns:
+        extracted_tweets: List - List of dictionaries with 'id', 'text', and 'created_at' keys
+    """
     return [
         {
             "id": tweet["tweet"]["id"], 
@@ -25,6 +39,17 @@ def get_tweet_text(tweet):
     return tweet['text']
 
 def get_tweets_by_date(tweets:List, start_date, end_date=None)->List:
+    """
+    This function filters tweets based on the start and end date.
+    If no end date is provided, the function will filter tweets for the specified start date only.
+    ----------
+    Args:
+        tweets: List - List of tweet dictionaries
+        start_date: str - Start date in the format 'YYYY-MM-DD'
+        end_date: str - End date in the format 'YYYY-MM-DD'
+    Returns:
+        filtered_tweets: List - List of filtered tweets
+    """
     start_date = datetime.strptime(start_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
         
     if end_date is None:
