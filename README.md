@@ -1,11 +1,20 @@
-# kino-compass
+# 𝕏Compass
+This is a fun project meant to test out the rating capabilities of LLMs.
+
+![X compass image](compass.png)
+
+----
+
+Requirements:
+- ADD REQ
+
 
 TODOS:
-- FIGURE OUT HOW TO UNLOAD THE GPU MEMORY RELIABLY!
-- FIGURE OUT HOW TO CANCEL THE REQUEST!
-- REMOVE "LAUNCHING X COMPASS"
-- ADD GROQ AND GPT4o APIs
-- CHECK IF ENTERED API KEY IS VALID OR NOT
-- MAKE THE CHART FLEXIBLE!
-- ADD A PROGRESS BAR FOR THE CHART
-- ADD A EXPORT AS IMAGE FOR THE CHART!
+- [] Make getting coords faster with proper batching.
+- [] Add functionality for custom coordinate words.
+- [] Add getting tweets by date.
+- [] Experiment with better prompts.
+- [] Add an option to change local LLM from the UI.
+- [] Make login less annoying if creds are already entered, add a loading sign.
+- [] Add a progress bar for the chart instead of loading sign.
+- [] Debloat everything.
